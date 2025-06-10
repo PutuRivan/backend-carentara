@@ -13,10 +13,6 @@ yarn-error.log*
 .env.local
 .env.*.local
 
-# Prisma
-/prisma/migrations
-/prisma/.env
-
 # Build output (kalau kamu build ke folder dist/build)
 dist/
 build/
