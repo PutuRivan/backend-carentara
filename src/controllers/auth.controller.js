@@ -35,8 +35,7 @@ async function register(req, res) {
         name: true,
         email: true,
         role: true,
-        phone: true,
-        address: true
+        phoneNumber: true,
       }
     });
 
