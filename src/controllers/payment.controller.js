@@ -3,25 +3,32 @@ const prisma = require("../utils/prisma");
 
 async function CreateInvoice(req, res) {
   try {
-    const { email, amount } = req.body
+    const { id_user, amount } = req.body
 
-    if (!email || !amount) {
+    if (!id_user || !amount) {
       res.status(400).json({
-        message: 'Gagal Menambahkan User',
+        message: 'Data User Tidak Lengkap',
         error: 'Data Tidak Lengkap'
       });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { id: id_user } });
 
-    if (!user) {
+    if (!user && !user.phoneNumber) {
       res.status(400).json({
-        message: 'Gagal Menambahkan User',
-        error: 'User Tidak Ditemukan'
+        message: 'Data User Tidak Ditemukan',
+        error: 'User Tidak Ditemukan atau Tidak Memiliki Nomor Telepon'
       });
     }
 
-    console.log(user)
+    const booking = await prisma.booking.findUnique({ where: { id: id_user } });
+
+    if (!booking) {
+      res.status(400).json({
+        message: 'Data Booking Tidak Ditemukan',
+        error: 'Booking Tidak Ditemukan'
+      });
+    }
 
     const invoice = await fetch(`${XENDIT_API_URL}/invoices`, {
       method: 'POST',
@@ -30,9 +37,9 @@ async function CreateInvoice(req, res) {
         Authorization: `Basic ${XENDIT_API_KEY}`
       },
       body: JSON.stringify({
-        "external_id": new Date().toISOString(),
+        "external_id": booking.id,
         "amount": amount,
-        "payer_email": email,
+        "payer_email": user.email,
         "description": "Pembayaran untuk sewa mobil",
         "customer": {
           "given_names": user.name,
@@ -47,14 +54,23 @@ async function CreateInvoice(req, res) {
       })
     }).then(res => res.json());
 
-    // const payment = await prisma.payment.create({
-    //   data: {
-    //     amount: amount,
-    //     invoiceUrl: invoice.invoice_url
-    //   }
-    // })
+    if (!invoice) {
+      res.status(400).json({
+        message: 'Invoice Gagal Dibuat',
+        error: 'Invoice Tidak Ditemukan'
+      });
+    }
 
-    return res.status(201).json({ message: "Invoice Created", data: invoice })
+    const payment = await prisma.payment.create({
+      data: {
+        bookingId: booking.id,
+        amount: amount,
+        transactionId: invoice.id,
+        invoiceUrl: invoice.invoice_url,
+      }
+    })
+
+    return res.status(201).json({ message: "Invoice Created", data: payment })
 
 
   } catch (error) {

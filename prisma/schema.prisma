@@ -113,7 +113,7 @@ model Payment {
   id            String        @id @default(cuid())
   bookingId     String        @unique
   amount        Decimal
-  paymentMethod String
+  paymentMethod String?
   status        PaymentStatus @default(PENDING)
   transactionId String?
   invoiceUrl    String
