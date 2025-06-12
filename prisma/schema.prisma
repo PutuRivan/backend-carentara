@@ -26,3 +26,116 @@ enum PaymentStatus {
   SUCCESS
   FAILED
 }
+
+model User {
+  id             String  @id @default(cuid())
+  email          String  @unique
+  name           String
+  password       String
+  phoneNumber    String? @unique
+  profilePicture String?
+  role           Role    @default(USER)
+  isVerified     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cars     Car[]     @relation("OwnerCars")
+  bookings Booking[]
+  reviews  Review[]
+}
+
+model Car {
+  id           String  @id @default(cuid())
+  make         String
+  model        String
+  year         Int
+  licensePlate String  @unique
+  pricePerDay  Decimal
+  description  String  @db.Text
+  isAvailable  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId String
+  owner   User   @relation("OwnerCars", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  addressId String
+  address   Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  images   CarImage[]
+  bookings Booking[]
+  reviews  Review[]
+}
+
+model CarImage {
+  id        String  @id @default(cuid())
+  url       String
+  isPrimary Boolean @default(false)
+  sortOrder Int?
+
+  carId String
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  city       String
+  district   String
+  street     String
+  postalCode String?
+
+  cars Car[]
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  startDate    DateTime
+  endDate      DateTime
+  totalPrice   Decimal
+  status       BookingStatus @default(PENDING)
+  cancelReason String?
+  phoneNumber  String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  carId String
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Restrict)
+
+  payment Payment?
+  review  Review?
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  bookingId     String        @unique
+  amount        Decimal
+  paymentMethod String
+  status        PaymentStatus @default(PENDING)
+  transactionId String?
+
+  paymentDate DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  carId String
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
