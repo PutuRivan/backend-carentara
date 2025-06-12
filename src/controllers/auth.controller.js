@@ -35,8 +35,7 @@ async function register(req, res) {
         name: true,
         email: true,
         role: true,
-        phone: true,
-        address: true
+        phoneNumber: true,
       }
     });
 
@@ -91,7 +90,7 @@ async function Login(req, res) {
       });
     }
 
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
 
     // Hapus password, createdAt, updatedAt
     const { password, createdAt, updatedAt, ...userWithoutSensitiveInfo } = user;

@@ -7,124 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            String         @id @default(uuid())
-  name          String
-  email         String         @unique
-  password      String
-  phone         String?
-  address       String?
-  role          UserRole       @default(USER)
-  createdAt     DateTime?      @default(now())
-  updatedAt     DateTime?      @updatedAt
-  cars          Car[]          @relation("UserCars")
-  notifications Notification[]
-  orders        Order[]        @relation("UserOrders")
-  reviews       Review[]
-}
-
-model Car {
-  id          String     @id @default(uuid())
-  userId      String
-  brand       String?
-  model       String?
-  year        Int?
-  pricePerDay Float?
-  location    String?
-  status      CarStatus?
-  createdAt   DateTime?  @default(now())
-  updatedAt   DateTime?  @updatedAt
-  user        User       @relation("UserCars", fields: [userId], references: [id])
-  images      CarImage[]
-  orders      Order[]
-  reviews     Review[]
-}
-
-model Order {
-  id              String           @id @default(uuid())
-  userId          String
-  carId           String
-  startDate       DateTime?
-  endDate         DateTime?
-  totalPrice      Float?
-  status          OrderStatus?
-  createdAt       DateTime?        @default(now())
-  updatedAt       DateTime?        @updatedAt
-  car             Car              @relation(fields: [carId], references: [id])
-  user            User             @relation("UserOrders", fields: [userId], references: [id])
-  payment         Payment?
-  transactionLogs TransactionLog[]
-}
-
-model Payment {
-  id        String         @id @default(uuid())
-  orderId   String         @unique
-  amount    Float?
-  method    String?
-  status    PaymentStatus?
-  createdAt DateTime?      @default(now())
-  updatedAt DateTime?      @updatedAt
-  order     Order          @relation(fields: [orderId], references: [id])
-}
-
-model CarImage {
-  id        String    @id @default(uuid())
-  carId     String
-  imageUrl  String
-  createdAt DateTime? @default(now())
-  car       Car       @relation(fields: [carId], references: [id])
-}
-
-model Notification {
-  id        String    @id @default(uuid())
-  userId    String
-  message   String
-  isRead    Boolean   @default(false)
-  createdAt DateTime? @default(now())
-  user      User      @relation(fields: [userId], references: [id])
-}
-
-model TransactionLog {
-  id          String    @id @default(uuid())
-  orderId     String
-  action      String
-  description String?
-  createdAt   DateTime? @default(now())
-  order       Order     @relation(fields: [orderId], references: [id])
-}
-
-model Review {
-  id        String    @id @default(uuid())
-  userId    String
-  carId     String
-  rating    Int
-  comment   String?
-  createdAt DateTime? @default(now())
-  car       Car       @relation(fields: [carId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
-}
-
-enum UserRole {
+enum Role {
   USER
   OWNER
   ADMIN
 }
 
-enum CarStatus {
-  AVAILABLE
-  UNAVAILABLE
-  MAINTENANCE
-}
-
-enum OrderStatus {
+enum BookingStatus {
   PENDING
   CONFIRMED
+  ONGOING
   COMPLETED
   CANCELLED
 }
 
 enum PaymentStatus {
   PENDING
-  PAID
+  SUCCESS
   FAILED
 }
