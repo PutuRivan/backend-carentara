@@ -5,7 +5,7 @@ function authorization(roles) {
   return function (req, res, next) {
     try {
       let token = '';
-      let user = { role: 'guest' };
+      let user = { role: 'GUEST' };
 
       if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
         token = req.headers.authorization.split(' ')[1];
