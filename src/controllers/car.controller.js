@@ -2,9 +2,41 @@ const cloudinary = require('../utils/cloudinary-config');
 const uploadToCloudinary = require('../utils/cloudinary-upload');
 const prisma = require('../utils/prisma');
 
-async function getCars(req, res) {
-  const cars = await prisma.car.findMany();
-  res.json(cars);
+async function getAllCars(req, res) {
+  try {
+    const cars = await prisma.car.findMany({
+      include: {
+        address: true,
+        images: true, // harus 'images' sesuai Prisma schema
+        owner: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            phoneNumber: true,
+            profilePicture: true,
+            role: true,
+            isVerified: true,
+            createdAt: true,
+            updatedAt: true
+            // password tidak diambil
+          }
+        }
+      }
+    });
+
+    res.status(200).json({
+      message: 'Success',
+      data: cars
+    });
+
+  } catch (error) {
+    console.error('Error fetching cars:', error);
+    res.status(500).json({
+      message: 'Internal Server Error',
+      error: error.message
+    });
+  }
 }
 
 async function getCarsById(req, res) {
@@ -123,4 +155,4 @@ async function deleteCarById(req, res) {
   res.json({ message: 'Mobil dihapus' });
 }
 
-module.exports = { getCars, getCarsById, createCar, updateCarById, deleteCarById };
+module.exports = { getAllCars, getCarsById, createCar, updateCarById, deleteCarById };
