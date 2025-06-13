@@ -10,7 +10,7 @@ const upload = multer({ storage: storage, limits: { fileSize: maxSize } });
 
 router.get('/', getCars);
 router.get('/:id', getCarsById);
-router.post('/', authorization(['admin']), upload.single('car_image'), createCar);
+router.post('/', authorization(['OWNER', 'ADMIN']), upload.array('car_image'), createCar);
 router.put('/:id', updateCarById);
 router.delete('/:id', deleteCarById);
 

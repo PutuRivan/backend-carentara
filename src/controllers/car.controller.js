@@ -1,3 +1,5 @@
+const cloudinary = require('../utils/cloudinary-config');
+const uploadToCloudinary = require('../utils/cloudinary-upload');
 const prisma = require('../utils/prisma');
 
 async function getCars(req, res) {
@@ -21,15 +23,16 @@ async function createCar(req, res) {
       pricePerDay,
       description,
       ownerId,
-      addressId,
+      city,
+      district,
+      street,
+      postalCode
     } = req.body;
 
-    // Validasi field wajib
-    if (!make || !model || !year || !licensePlate || !pricePerDay || !description || !ownerId || !addressId) {
-      return res.status(400).json({ message: 'All fields are required' });
+    if (!make || !model || !year || !licensePlate || !pricePerDay || !description || !ownerId || !city || !district || !street) {
+      return res.status(400).json({ message: 'Required fields missing' });
     }
 
-    // Cek plat nomor unik
     const existingCar = await prisma.car.findUnique({
       where: { licensePlate },
     });
@@ -38,50 +41,68 @@ async function createCar(req, res) {
       return res.status(400).json({ message: 'License Plate already exists' });
     }
 
-    // Buat data mobil (tanpa gambar dulu)
-    const car = await prisma.car.create({
-      data: {
-        make,
-        model,
-        year: parseInt(year),
-        licensePlate,
-        pricePerDay: parseFloat(pricePerDay),
-        description,
-        ownerId,
-        addressId,
-      },
+    let cloudinaryResults = [];
+
+    // Upload semua gambar (jika ada) sebelum simpan ke DB
+    if (req.files && req.files.length > 0) {
+      try {
+        const uploadPromises = req.files.map(file =>
+          uploadToCloudinary(file.buffer, 'cars')
+        );
+        cloudinaryResults = await Promise.all(uploadPromises);
+      } catch (err) {
+        return res.status(500).json({ message: 'Cloudinary upload failed', error: err.message });
+      }
+    }
+
+    // Buat Address dan Car di dalam transaction
+    const [address, car] = await prisma.$transaction(async (tx) => {
+      const address = await tx.address.create({
+        data: {
+          city,
+          district,
+          street,
+          postalCode: postalCode || null,
+        },
+      });
+
+      const car = await tx.car.create({
+        data: {
+          make,
+          model,
+          year: parseInt(year),
+          licensePlate,
+          pricePerDay: parseFloat(pricePerDay),
+          description,
+          ownerId,
+          addressId: address.id,
+        },
+      });
+
+      return [address, car];
     });
 
-    // Upload gambar jika ada file
-    if (req.file) {
-      const result = await cloudinary.uploader.upload_stream(
-        { folder: 'cars' }, // folder di Cloudinary
-        async (error, result) => {
-          if (error) {
-            console.error('Cloudinary upload error:', error);
-            return res.status(500).json({ message: 'Image upload failed', error: error.message });
-          }
+    // Simpan semua gambar ke tabel CarImage
+    let savedImages = [];
+    if (cloudinaryResults.length > 0) {
+      const carImageData = cloudinaryResults.map((result, index) => ({
+        url: result.secure_url,
+        isPrimary: index === 0, // gambar pertama sebagai primary
+        carId: car.id,
+      }));
 
-          // Simpan data gambar ke database
-          await prisma.carImage.create({
-            data: {
-              id: uuidv4(),
-              url: result.secure_url,
-              isPrimary: true,
-              carId: car.id,
-            },
-          });
-
-          res.status(201).json({ message: 'Car created successfully', car });
-        }
-      );
-
-      // Kirim buffer ke Cloudinary
-      result.end(req.file.buffer);
-    } else {
-      // Jika tanpa gambar
-      res.status(201).json({ message: 'Car created successfully (without image)', car });
+      savedImages = await prisma.carImage.createMany({
+        data: carImageData,
+      });
     }
+
+    res.status(201).json({
+      message: 'Car, Address & Images created successfully',
+      car,
+      address,
+      images: savedImages
+    });
+
   } catch (error) {
     console.error('Error creating car:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
