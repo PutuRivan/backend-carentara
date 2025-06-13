@@ -71,7 +71,7 @@ async function getCarsById(req, res) {
   res.status(200).json({ message: "Success", data: car });
 }
 
-const getSearchCars = async (req, res) => {
+async function getSearchCars(req, res) {
   try {
     const { q, make, model, minPrice, maxPrice } = req.query;
 
@@ -237,7 +237,7 @@ async function updateCarStatus(req, res) {
   res.status(200).json({ message: "Status Mobil Di Update", data: updated });
 }
 
-const deleteCarById = async (req, res) => {
+async function deleteCarById(req, res) {
   const { id } = req.params;
 
   if (!id) {
