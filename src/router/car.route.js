@@ -13,6 +13,6 @@ router.get('/search', authorization(['GUEST', 'USER', 'OWNER', 'ADMIN']), getSea
 router.get('/:id', authorization(['GUEST', 'USER', 'OWNER', 'ADMIN']), getCarsById);
 router.post('/', authorization(['OWNER', 'ADMIN']), upload.array('car_image'), createCar);
 router.put('/', authorization(['OWNER', 'ADMIN']), updateCarStatus);
-router.delete('/:id', deleteCarById);
+router.delete('/:id', authorization(['OWNER', 'ADMIN']), deleteCarById);
 
 module.exports = router;
