@@ -245,17 +245,17 @@ async function deleteCarById(req, res) {
   }
 
   try {
-    // Ambil data mobil + gambar
+    // Ambil data mobil lengkap (termasuk images dan address)
     const car = await prisma.car.findUnique({
       where: { id: id },
-      include: { images: true } // pastikan relasi images ada di Prisma schema
+      include: { images: true, address: true } // pastikan address include
     });
 
     if (!car) {
       return res.status(404).json({ message: 'Mobil tidak ditemukan' });
     }
 
-    // Hapus semua gambar mobil dari Cloudinary
+    // Hapus semua gambar dari Cloudinary
     if (car.images && car.images.length > 0) {
       for (const image of car.images) {
         const publicId = extractPublicId(image.url);
@@ -266,13 +266,23 @@ async function deleteCarById(req, res) {
     }
 
     // Hapus mobil dari database
-    await prisma.car.delete({ where: { id: id } });
+    await prisma.car.delete({
+      where: { id: id }
+    });
 
-    res.status(200).json({ message: 'Mobil dan semua gambar berhasil dihapus' });
+    // Hapus address terkait
+    await prisma.address.delete({
+      where: { id: car.addressId }
+    });
+
+    res.status(200).json({ message: 'Mobil, gambar, dan alamat berhasil dihapus' });
 
   } catch (error) {
     console.error('Error deleting car:', error);
-    res.status(500).json({ message: 'Gagal menghapus mobil', error: error.message });
+    res.status(500).json({
+      message: 'Gagal menghapus mobil',
+      error: error.message
+    });
   }
 };
 
