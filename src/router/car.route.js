@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllCars, getCarsById, createCar, updateCarById, deleteCarById } = require('../controllers/car.controller');
+const { getAllCars, getCarsById, createCar, updateCarById, deleteCarById, getSearchCars } = require('../controllers/car.controller');
 const multer = require('multer');
 const authorization = require('../middlewares/Authorization');
 const router = express.Router();
@@ -9,7 +9,8 @@ const storage = multer.memoryStorage()
 const upload = multer({ storage: storage, limits: { fileSize: maxSize } });
 
 router.get('/', authorization(['GUEST', 'USER', 'OWNER', 'ADMIN']), getAllCars);
-router.get('/:id', getCarsById);
+router.get('/search', authorization(['GUEST', 'USER', 'OWNER', 'ADMIN']), getSearchCars);
+router.get('/:id', authorization(['GUEST', 'USER', 'OWNER', 'ADMIN']), getCarsById);
 router.post('/', authorization(['OWNER', 'ADMIN']), upload.array('car_image'), createCar);
 router.put('/:id', updateCarById);
 router.delete('/:id', deleteCarById);

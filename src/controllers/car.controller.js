@@ -7,7 +7,7 @@ async function getAllCars(req, res) {
     const cars = await prisma.car.findMany({
       include: {
         address: true,
-        images: true, // harus 'images' sesuai Prisma schema
+        images: true,
         owner: {
           select: {
             id: true,
@@ -19,7 +19,6 @@ async function getAllCars(req, res) {
             isVerified: true,
             createdAt: true,
             updatedAt: true
-            // password tidak diambil
           }
         }
       }
@@ -40,10 +39,83 @@ async function getAllCars(req, res) {
 }
 
 async function getCarsById(req, res) {
-  const car = await prisma.car.findUnique({ where: { id: Number(req.params.id) } });
-  if (!car) return res.status(404).json({ message: 'Mobil tidak ditemukan' });
-  res.json(car);
+  const { id } = req.params;
+
+  const car = await prisma.car.findUnique({
+    where: { id },
+    include: {
+      address: true,
+      images: true,
+      owner: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          phoneNumber: true,
+          profilePicture: true,
+          role: true,
+          isVerified: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      }
+    }
+  });
+
+  if (!car) {
+    return res.status(404).json({ message: 'Mobil tidak ditemukan' });
+  }
+
+  res.status(200).json({ message: "Success", data: car });
 }
+
+const getSearchCars = async (req, res) => {
+  try {
+    const { q, make, model, minPrice, maxPrice } = req.query;
+
+    const filters = {
+      ...(make && { make: { contains: make, mode: 'insensitive' } }),
+      ...(model && { model: { contains: model, mode: 'insensitive' } }),
+      ...(minPrice && { pricePerDay: { gte: parseFloat(minPrice) } }),
+      ...(maxPrice && {
+        pricePerDay: {
+          ...(minPrice ? { gte: parseFloat(minPrice) } : {}),
+          lte: parseFloat(maxPrice)
+        }
+      }),
+    };
+
+    const cars = await prisma.car.findMany({
+      where: {
+        AND: [
+          filters,
+          q
+            ? {
+              OR: [
+                { make: { contains: q, mode: 'insensitive' } },
+                { model: { contains: q, mode: 'insensitive' } },
+                { address: { city: { contains: q, mode: 'insensitive' } } }
+              ]
+            }
+            : {}
+        ]
+      },
+      include: { address: true, images: true, owner: true }
+    });
+
+    res.status(200).json({
+      message: 'Cars retrieved successfully',
+      data: cars
+    });
+
+  } catch (error) {
+    console.error('Error searching cars:', error);
+    res.status(500).json({
+      message: 'Internal Server Error',
+      error: error.message
+    });
+  }
+};
 
 async function createCar(req, res) {
   try {
@@ -155,4 +227,4 @@ async function deleteCarById(req, res) {
   res.json({ message: 'Mobil dihapus' });
 }
 
-module.exports = { getAllCars, getCarsById, createCar, updateCarById, deleteCarById };
+module.exports = { getAllCars, getCarsById, getSearchCars, createCar, updateCarById, deleteCarById };
