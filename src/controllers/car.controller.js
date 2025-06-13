@@ -1,4 +1,6 @@
 const cloudinary = require('../utils/cloudinary-config');
+const deleteFromCloudinary = require('../utils/cloudinary-delete');
+const extractPublicId = require('../utils/cloudinary-extract-publicid');
 const uploadToCloudinary = require('../utils/cloudinary-upload');
 const prisma = require('../utils/prisma');
 
@@ -213,18 +215,66 @@ async function createCar(req, res) {
   }
 }
 
-async function updateCarById(req, res) {
-  const { name, brand, price } = req.body;
+async function updateCarStatus(req, res) {
+  const { id_car, status } = req.body;
+
+  if (!id_car || status === undefined) {
+    return res.status(400).json({ message: 'Data Tidak Lengkap' });
+  }
+
+  const car = await prisma.car.findUnique({ where: { id: id_car } });
+
+  if (!car) {
+    return res.status(404).json({ message: 'Mobil Tidak Ditemukan' });
+  }
+
   const updated = await prisma.car.update({
-    where: { id: Number(req.params.id) },
-    data: { name, brand, price },
+    where: { id: id_car },
+    data: {
+      isAvailable: status
+    },
   });
-  res.json(updated);
+  res.status(200).json({ message: "Status Mobil Di Update", data: updated });
 }
 
-async function deleteCarById(req, res) {
-  await prisma.car.delete({ where: { id: Number(req.params.id) } });
-  res.json({ message: 'Mobil dihapus' });
-}
+const deleteCarById = async (req, res) => {
+  const { id } = req.params;
 
-module.exports = { getAllCars, getCarsById, getSearchCars, createCar, updateCarById, deleteCarById };
+  if (!id) {
+    return res.status(400).json({ message: 'ID mobil tidak diberikan' });
+  }
+
+  try {
+    // Ambil data mobil + gambar
+    const car = await prisma.car.findUnique({
+      where: { id: id },
+      include: { images: true } // pastikan relasi images ada di Prisma schema
+    });
+
+    if (!car) {
+      return res.status(404).json({ message: 'Mobil tidak ditemukan' });
+    }
+
+    // Hapus semua gambar mobil dari Cloudinary
+    if (car.images && car.images.length > 0) {
+      for (const image of car.images) {
+        const publicId = extractPublicId(image.url);
+        if (publicId) {
+          await deleteFromCloudinary(publicId);
+        }
+      }
+    }
+
+    // Hapus mobil dari database
+    await prisma.car.delete({ where: { id: id } });
+
+    res.status(200).json({ message: 'Mobil dan semua gambar berhasil dihapus' });
+
+  } catch (error) {
+    console.error('Error deleting car:', error);
+    res.status(500).json({ message: 'Gagal menghapus mobil', error: error.message });
+  }
+};
+
+
+module.exports = { getAllCars, getCarsById, getSearchCars, createCar, updateCarStatus, deleteCarById };
