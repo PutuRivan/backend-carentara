@@ -119,6 +119,22 @@ async function getSearchCars(req, res) {
   }
 };
 
+async function getOwnCars(req, res) {
+  try {
+    const cars = await prisma.car.findMany({
+      where: { ownerId: req.user.id },
+      include: { address: true, images: true }
+    });
+    res.status(200).json({ message: "Success", data: cars });
+  } catch (error) {
+    console.error('Error fetching own cars:', error);
+    res.status(500).json({
+      message: 'Internal Server Error',
+      error: error.message
+    });
+  }
+}
+
 async function createCar(req, res) {
   try {
     const {
@@ -137,6 +153,11 @@ async function createCar(req, res) {
 
     if (!make || !model || !year || !licensePlate || !pricePerDay || !description || !ownerId || !city || !district || !street) {
       return res.status(400).json({ message: 'Required fields missing' });
+    }
+
+    const owner = await prisma.user.findUnique({ where: { id: ownerId } });
+    if (!owner) {
+      return res.status(404).json({ message: 'Owner not found' });
     }
 
     const existingCar = await prisma.car.findUnique({
@@ -287,4 +308,4 @@ async function deleteCarById(req, res) {
 };
 
 
-module.exports = { getAllCars, getCarsById, getSearchCars, createCar, updateCarStatus, deleteCarById };
+module.exports = { getAllCars, getCarsById, getSearchCars, getOwnCars, createCar, updateCarStatus, deleteCarById };
