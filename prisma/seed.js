@@ -11,7 +11,6 @@ async function main() {
   await prisma.user.createMany({
     data: [
       {
-        id: 'user1', // bisa pakai cuid() atau biarkan prisma generate jika tidak ingin set manual
         email: 'user1@example.com',
         name: 'John Doe',
         password: hashedPassword1,
@@ -19,7 +18,6 @@ async function main() {
         role: 'USER',
       },
       {
-        id: 'owner1',
         email: 'owner1@example.com',
         name: 'Jane Smith',
         password: hashedPassword2,
@@ -27,7 +25,6 @@ async function main() {
         role: 'OWNER',
       },
       {
-        id: 'admin1',
         email: 'admin1@example.com',
         name: 'Admin User',
         password: hashedPassword3,
