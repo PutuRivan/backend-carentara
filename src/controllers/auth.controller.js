@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config');
 
-async function register(req, res) {
+async function registerUser(req, res) {
   try {
     const { name, email, password } = req.body;
 
@@ -109,8 +109,68 @@ async function Login(req, res) {
   }
 }
 
+async function registerOwnerByAdmin(req, res) {
+  try {
+    const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+      res.status(400).json({
+        message: 'Gagal Menambahkan User',
+        error: 'Data Tidak Lengkap'
+      });
+    }
+
+    const userExists = await prisma.user.findUnique({ where: { email } });
+
+    if (userExists) {
+      res.status(400).json({
+        message: 'Gagal Menambahkan User',
+        error: 'Email Sudah Terdaftar'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role
+      },
+      select: {
+        name: true,
+        email: true,
+        role: true,
+        phoneNumber: true,
+      }
+    })
+
+    if (!user) {
+      res.status(500).json({
+        message: 'Gagal Menambahkan User',
+        error: 'Gagal Menambahkan User'
+      });
+    }
+
+    res.status(201).json({
+      message: 'Berhasil Menambahkan User',
+      data:
+        user
+    });
+
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({
+      message: 'Gagal Menambahkan User',
+      error: error.message
+    });
+  }
+}
+
 
 module.exports = {
-  register,
-  Login
+  registerUser,
+  Login,
+  registerOwnerByAdmin
 }

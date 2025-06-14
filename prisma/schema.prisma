@@ -95,9 +95,9 @@ model Booking {
   totalPrice   Decimal
   status       BookingStatus @default(PENDING)
   cancelReason String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  phoneNumber  String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
