@@ -29,7 +29,6 @@ async function main() {
         name: 'Admin User',
         password: hashedPassword3,
         phoneNumber: '628555666777',
-        profilePicture: 'https://example.com/profile3.jpg',
         role: 'ADMIN',
       },
     ],
