@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllCars, getCarsById, createCar, updateCarStatus, deleteCarById, getSearchCars } = require('../controllers/car.controller');
+const { getAllCars, getCarsById, createCar, updateCarStatus, deleteCarById, getSearchCars, getOwnCars } = require('../controllers/car.controller');
 const multer = require('multer');
 const authorization = require('../middlewares/Authorization');
 const router = express.Router();
@@ -14,5 +14,6 @@ router.get('/:id', authorization(['GUEST', 'USER', 'OWNER', 'ADMIN']), getCarsBy
 router.post('/', authorization(['OWNER', 'ADMIN']), upload.array('car_image'), createCar);
 router.put('/', authorization(['OWNER', 'ADMIN']), updateCarStatus);
 router.delete('/:id', authorization(['OWNER', 'ADMIN']), deleteCarById);
+router.get('/owner/cars', authorization(['OWNER']), getOwnCars);
 
 module.exports = router;
