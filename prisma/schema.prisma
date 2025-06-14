@@ -35,7 +35,6 @@ model User {
   phoneNumber    String? @unique
   profilePicture String?
   role           Role    @default(USER)
-  isVerified     Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -114,12 +113,12 @@ model Payment {
   id            String        @id @default(cuid())
   bookingId     String        @unique
   amount        Decimal
-  paymentMethod String
+  paymentMethod String?
   status        PaymentStatus @default(PENDING)
   transactionId String?
-
-  paymentDate DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  invoiceUrl    String
+  paymentDate   DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 }

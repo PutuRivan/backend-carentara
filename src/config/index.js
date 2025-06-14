@@ -3,6 +3,8 @@ require("dotenv").config()
 module.exports = {
   JWT_SECRET: process.env.JWT_SECRET,
   PORT: process.env.PORT,
+  XENDIT_API_URL: process.env.XENDIT_API_URL,
+  XENDIT_API_KEY: process.env.XENDIT_API_KEY,
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET
