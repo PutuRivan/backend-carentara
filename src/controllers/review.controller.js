@@ -1,8 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// [POST] Buat review baru (hanya USER)
-exports.createReview = async (req, res) => {
+async function createReview(req, res) {
   const { bookingId, rating, comment } = req.body;
   const userId = req.user.id;
 
@@ -44,8 +43,7 @@ exports.createReview = async (req, res) => {
   }
 };
 
-// [PUT] Update review milik sendiri (USER)
-exports.updateReview = async (req, res) => {
+async function updateReview(req, res) {
   const { reviewId } = req.params;
   const { rating, comment } = req.body;
   const userId = req.user.id;
@@ -70,8 +68,7 @@ exports.updateReview = async (req, res) => {
   }
 };
 
-// [DELETE] Delete review (USER = miliknya, ADMIN = siapa saja)
-exports.deleteReview = async (req, res) => {
+async function deleteReview(req, res) {
   const { reviewId } = req.params;
   const userId = req.user.id;
   const userRole = req.user.role;
@@ -96,8 +93,7 @@ exports.deleteReview = async (req, res) => {
   }
 };
 
-// [GET] Semua review (USER, OWNER, ADMIN)
-exports.getAllReviews = async (req, res) => {
+async function getAllReviews(req, res) {
   try {
     const reviews = await prisma.review.findMany({
       include: {
@@ -113,8 +109,7 @@ exports.getAllReviews = async (req, res) => {
   }
 };
 
-// [GET] Review berdasarkan Booking ID (hanya USER)
-exports.getReviewByBookingId = async (req, res) => {
+async function getReviewByBookingId(req, res) {
   const { bookingId } = req.params;
   const userId = req.user.id;
 
@@ -145,8 +140,7 @@ exports.getReviewByBookingId = async (req, res) => {
   }
 };
 
-// [GET] OWNER melihat review untuk mobil miliknya
-exports.getReviewsForOwnCars = async (req, res) => {
+async function getReviewsByCarId(req, res) {
   const { carId } = req.params;
   const ownerId = req.user.id;
 
@@ -178,4 +172,13 @@ exports.getReviewsForOwnCars = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+module.exports = {
+  createReview,
+  updateReview,
+  deleteReview,
+  getAllReviews,
+  getReviewByBookingId,
+  getReviewsByCarId,
 };
