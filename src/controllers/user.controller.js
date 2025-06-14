@@ -1,0 +1,147 @@
+const prisma = require('../utils/prisma');
+
+// GET: Semua user atau search by name/email (via query)
+const getAllUsers = async (req, res) => {
+  try {
+    const { search } = req.query;
+
+    const users = await prisma.user.findMany({
+      where: search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } }
+            ]
+          }
+        : {},
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        role: true,
+        profilePicture: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    res.status(200).json({
+      message: 'Berhasil mengambil data user',
+      data: users
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Gagal mengambil data user',
+      error: error.message
+    });
+  }
+};
+
+// GET: User by ID
+const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        role: true,
+        profilePicture: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User tidak ditemukan'
+      });
+    }
+
+    res.status(200).json({
+      message: 'Berhasil mengambil data user',
+      data: user
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Gagal mengambil data user',
+      error: error.message
+    });
+  }
+};
+
+// PUT: Update nomor telepon user
+const updateUserPhone = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+      return res.status(400).json({
+        message: 'Nomor telepon harus diisi'
+      });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return res.status(404).json({ message: 'User tidak ditemukan' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { phoneNumber },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        updatedAt: true
+      }
+    });
+
+    res.status(200).json({
+      message: 'Nomor telepon berhasil diupdate',
+      data: updatedUser
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Gagal memperbarui user',
+      error: error.message
+    });
+  }
+};
+
+// DELETE: Hapus user by ID dengan validasi
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return res.status(404).json({ message: 'User tidak ditemukan' });
+    }
+
+    await prisma.user.delete({ where: { id } });
+
+    res.status(200).json({
+      message: 'User berhasil dihapus'
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Gagal menghapus user',
+      error: error.message
+    });
+  }
+};
+
+module.exports = {
+  getAllUsers,
+  getUserById,
+  updateUserPhone,
+  deleteUser
+};
