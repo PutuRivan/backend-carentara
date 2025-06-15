@@ -1,6 +1,6 @@
 const prisma = require("../utils/prisma");
 
-async function GetUserBookings(req, res) {
+async function GetOwnBookingByUser(req, res) {
   try {
     const { userId } = req.query;
 
@@ -10,7 +10,15 @@ async function GetUserBookings(req, res) {
 
     const bookings = await prisma.booking.findMany({
       where: { userId },
-      include: { car: true } // include mobil terkait jika mau
+      include: {
+        car: {
+          include: {
+            address: true,
+            images: true
+          }
+        }
+
+      }
     });
 
     return res.status(200).json({ message: 'List booking ditemukan', data: bookings });
@@ -20,18 +28,31 @@ async function GetUserBookings(req, res) {
   }
 }
 
-async function GetBookingDetail(req, res) {
+async function GetBookingDetailOnOwnCar(req, res) {
   try {
     const { bookingId } = req.params;
-    const userId = req.user.id; // dari middleware authorization
+    const userId = req.user.id;
 
     if (!bookingId || !userId) {
       return res.status(400).json({ message: 'Booking ID atau User ID tidak ditemukan' });
     }
 
     const booking = await prisma.booking.findFirst({
-      where: { id: bookingId, userId },
-      include: { car: true } // jika mau detail mobil
+      where: {
+        id: bookingId,
+        car: {
+          ownerId: userId
+        }
+      },
+      include: {
+        car: {
+          include:
+          {
+            address: true,
+            images: true
+          }
+        }
+      }
     });
 
     if (!booking) {
@@ -160,5 +181,77 @@ async function CancelBooking(req, res) {
   }
 }
 
+async function updateBookingOnOwnCar(req, res) {
+  try {
+    const { bookingId } = req.params;
+    const { bookingStatus } = req.body;
 
-module.exports = { CreateBooking, GetUserBookings, GetBookingDetail, CancelBooking };
+    if (!bookingId) {
+      return res.status(400).json({ message: 'Data pembatalan tidak lengkap' });
+    }
+
+    const booking = await prisma.booking.findFirst({
+      where: { id: bookingId }
+    });
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking tidak ditemukan' });
+    }
+
+    if (booking.status !== 'PENDING') {
+      return res.status(400).json({ message: 'Booking tidak bisa diupdate karena status bukan PENDING' });
+    }
+
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: bookingStatus
+      }
+    });
+
+  } catch (error) {
+    console.error('updateBookingOnOwnCar Error:', error);
+    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+}
+
+async function deleteBookingByAdmin(req, res) {
+  try {
+    const { bookingId } = req.params;
+
+    if (!bookingId) {
+      return res.status(400).json({ message: 'Data pembatalan tidak lengkap' });
+    }
+
+    const booking = await prisma.booking.findFirst({
+      where: { id: bookingId }
+    });
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking tidak ditemukan' });
+    }
+
+    if (booking.status !== 'CANCELLED' || booking.status !== 'COMPLETED') {
+      return res.status(400).json({ message: 'Booking tidak bisa dibatalkan karena status bukan PENDING atau COMPLETED' });
+    }
+
+    await prisma.booking.delete({
+      where: { id: bookingId }
+    });
+
+    return res.status(200).json({ message: 'Booking berhasil dihapus' });
+
+  } catch (error) {
+    console.error('deleteBookingByAdmin Error:', error);
+    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+}
+
+module.exports = {
+  CreateBooking,
+  GetOwnBookingByUser,
+  GetBookingDetailOnOwnCar,
+  CancelBooking,
+  deleteBookingByAdmin,
+  updateBookingOnOwnCar
+};
