@@ -121,10 +121,23 @@ async function getSearchCars(req, res) {
 
 async function getOwnCars(req, res) {
   try {
+
+    const userId = req.user.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
     const cars = await prisma.car.findMany({
-      where: { ownerId: req.user.id },
-      include: { address: true, images: true }
+      where: {
+        ownerId: userId
+      },
+      include: {
+        address: true,
+        images: true
+      }
     });
+
     res.status(200).json({ message: "Success", data: cars });
   } catch (error) {
     console.error('Error fetching own cars:', error);
