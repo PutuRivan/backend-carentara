@@ -1,27 +1,37 @@
-const { XENDIT_API_URL, XENDIT_API_KEY } = require("../config");
+const { XENDIT_CALLBACK_TOKEN } = require("../config");
 const prisma = require("../utils/prisma");
+const { XenditCreateInvoice } = require("../utils/xendit/create-invoice");
 
 async function CreateInvoice(req, res) {
   try {
-    const { id_user, amount } = req.body
+    const { email, amount, bookingId } = req.body
 
-    if (!id_user || !amount) {
+    if (!email || !amount || !bookingId) {
       res.status(400).json({
-        message: 'Data User Tidak Lengkap',
+        message: 'Data Tidak Lengkap',
         error: 'Data Tidak Lengkap'
       });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: id_user } });
+    const user = await prisma.user.findUnique({ where: { email: email } });
 
-    if (!user && !user.phoneNumber) {
+    if (!user) {
       res.status(400).json({
         message: 'Data User Tidak Ditemukan',
         error: 'User Tidak Ditemukan atau Tidak Memiliki Nomor Telepon'
       });
     }
 
-    const booking = await prisma.booking.findUnique({ where: { id: id_user } });
+    if (!user.phoneNumber) {
+      res.status(400).json({
+        message: 'Data User Tidak Ditemukan',
+        error: 'User Tidak Ditemukan atau Tidak Memiliki Nomor Telepon'
+      });
+    }
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId }
+    });
 
     if (!booking) {
       res.status(400).json({
@@ -30,29 +40,14 @@ async function CreateInvoice(req, res) {
       });
     }
 
-    const invoice = await fetch(`${XENDIT_API_URL}/invoices`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${XENDIT_API_KEY}`
-      },
-      body: JSON.stringify({
-        "external_id": booking.id,
-        "amount": amount,
-        "payer_email": user.email,
-        "description": "Pembayaran untuk sewa mobil",
-        "customer": {
-          "given_names": user.name,
-          "email": user.email,
-          "mobile_number": user.phoneNumber
-        },
-        "customer_notification_preference": {
-          "invoice_created": ["whatsapp", "email"],
-          "invoice_paid": ["whatsapp", "email"]
-        },
-        "payment_methods": ["BCA", "BNI", "BRI", "MANDIRI", "QRIS"]
-      })
-    }).then(res => res.json());
+    if (booking.status !== 'PENDING') {
+      res.status(400).json({
+        message: 'Data Booking Tidak Ditemukan',
+        error: 'Booking Tidak Ditemukan'
+      });
+    }
+
+    const invoice = await XenditCreateInvoice(user.email, amount, booking.id, user.name, user.phoneNumber);
 
     if (!invoice) {
       res.status(400).json({
@@ -70,9 +65,83 @@ async function CreateInvoice(req, res) {
       }
     })
 
-    return res.status(201).json({ message: "Invoice Created", data: payment })
+    return res.status(201).json({ message: "Invoice Created", data: payment });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
 
+async function UpdateInvoice(req, res) {
+  const callbackToken = req.headers['x-callback-token'];
+  const weebHookId = req.headers['webhook-id'];
 
+  if (callbackToken !== XENDIT_CALLBACK_TOKEN || !weebHookId) {
+    return res.status(403).json({ message: 'Invalid callback token' });
+  }
+
+  // lanjut update payment seperti biasa
+  const { id, status } = req.body;
+
+  const payment = await prisma.payment.findUnique({
+    where: { transactionId: id },
+  });
+
+  if (!payment) {
+    return res.status(404).json({ message: 'Payment not found' });
+  }
+
+  if (status === 'PAID') {
+    await prisma.payment.update({
+      where: { transactionId: id },
+      data: { status: 'SUCCESS' },
+    });
+
+    await prisma.booking.update({
+      where: { id: payment.bookingId },
+      data: { status: 'CONFIRMED' },
+    });
+  }
+
+  res.status(200).json({ message: 'Callback processed' });
+}
+
+async function getOwnPayment(req, res) {
+  try {
+    const userId = req.user.id;
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        booking: { userId }
+      },
+    });
+
+    if (!payments) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    res.status(200).json({ message: 'Payment found', data: payments });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+async function getPaymentForOwnCars(req, res) {
+  try {
+    const ownerId = req.user.id;
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        booking: { car: { ownerId } }
+      },
+    });
+
+    if (!payments) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    res.status(200).json({ message: 'Payment found', data: payments });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -80,5 +149,8 @@ async function CreateInvoice(req, res) {
 }
 
 module.exports = {
-  CreateInvoice
+  CreateInvoice,
+  UpdateInvoice,
+  getOwnPayment,
+  getPaymentForOwnCars
 }

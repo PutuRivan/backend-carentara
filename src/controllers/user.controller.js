@@ -1,18 +1,17 @@
 const prisma = require('../utils/prisma');
 
-// GET: Semua user atau search by name/email (via query)
-const getAllUsers = async (req, res) => {
+async function getAllUsers(req, res) {
   try {
     const { search } = req.query;
 
     const users = await prisma.user.findMany({
       where: search
         ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { email: { contains: search, mode: 'insensitive' } }
-            ]
-          }
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } }
+          ]
+        }
         : {},
       select: {
         id: true,
@@ -38,8 +37,7 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// GET: User by ID
-const getUserById = async (req, res) => {
+async function getUserById(req, res) {
   try {
     const { id } = req.params;
 
@@ -75,8 +73,7 @@ const getUserById = async (req, res) => {
   }
 };
 
-// PUT: Update nomor telepon user
-const updateUserPhone = async (req, res) => {
+async function updateUser(req, res) {
   try {
     const { id } = req.params;
     const { phoneNumber } = req.body;
@@ -116,12 +113,12 @@ const updateUserPhone = async (req, res) => {
   }
 };
 
-// DELETE: Hapus user by ID dengan validasi
-const deleteUser = async (req, res) => {
+async function deleteUser(req, res) {
   try {
     const { id } = req.params;
 
     const user = await prisma.user.findUnique({ where: { id } });
+
     if (!user) {
       return res.status(404).json({ message: 'User tidak ditemukan' });
     }
@@ -131,6 +128,7 @@ const deleteUser = async (req, res) => {
     res.status(200).json({
       message: 'User berhasil dihapus'
     });
+    
   } catch (error) {
     res.status(500).json({
       message: 'Gagal menghapus user',
@@ -142,6 +140,6 @@ const deleteUser = async (req, res) => {
 module.exports = {
   getAllUsers,
   getUserById,
-  updateUserPhone,
+  updateUser,
   deleteUser
 };
