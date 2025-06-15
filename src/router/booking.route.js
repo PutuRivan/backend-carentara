@@ -6,13 +6,15 @@ const {
   CancelBooking,
   GetOwnBookingByUser,
   deleteBookingByAdmin,
-  updateBookingOnOwnCar
+  updateBookingOnOwnCar,
+  GetAllBookingOwnCar
 } = require('../controllers/booking.controller');
 
 const router = express.Router();
 
 router.post('/', authorization(['USER']), CreateBooking);
 router.get('/', authorization(['USER']), GetOwnBookingByUser);
+router.get('/owner', authorization(['OWNER']), GetAllBookingOwnCar);
 router.get('/detail/:bookingId', authorization(['OWNER']), GetBookingDetailOnOwnCar);
 router.put('/cancel/:bookingId', authorization(['USER']), CancelBooking);
 router.put('/update/:bookingId', authorization(['OWNER']), updateBookingOnOwnCar);

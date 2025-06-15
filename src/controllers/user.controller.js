@@ -1,3 +1,4 @@
+const { parsePhoneNumberFromString } = require('libphonenumber-js');
 const prisma = require('../utils/prisma');
 
 async function getAllUsers(req, res) {
@@ -84,6 +85,15 @@ async function updateUser(req, res) {
       });
     }
 
+    const parsedPhoneNumber = parsePhoneNumberFromString(phoneNumber, 'ID'); // 'ID' untuk Indonesia
+    if (!parsedPhoneNumber || !parsedPhoneNumber.isValid()) {
+      return res.status(400).json({
+        message: 'Format nomor telepon tidak valid'
+      });
+    }
+
+    const formattedPhoneNumber = parsedPhoneNumber.number; // E.164 format
+
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
       return res.status(404).json({ message: 'User tidak ditemukan' });
@@ -91,7 +101,7 @@ async function updateUser(req, res) {
 
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: { phoneNumber },
+      data: { phoneNumber: formattedPhoneNumber },
       select: {
         id: true,
         name: true,
@@ -128,7 +138,7 @@ async function deleteUser(req, res) {
     res.status(200).json({
       message: 'User berhasil dihapus'
     });
-    
+
   } catch (error) {
     res.status(500).json({
       message: 'Gagal menghapus user',

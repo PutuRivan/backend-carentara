@@ -66,6 +66,38 @@ async function GetBookingDetailOnOwnCar(req, res) {
   }
 }
 
+async function GetAllBookingOwnCar(req, res) {
+  try {
+    const userId = req.user.id;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID tidak ditemukan' });
+    }
+
+    const bookings = await prisma.booking.findMany({
+      where: {
+        car: {
+          ownerId: userId
+        }
+      },
+      include: {
+        car: {
+          include: {
+            address: true,
+            images: true
+          }
+        }
+      }
+    });
+
+    return res.status(200).json({ message: 'List booking ditemukan', data: bookings });
+
+  } catch (error) {
+    console.error('GetUserBookings Error:', error);
+    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+}
+
 async function CreateBooking(req, res) {
   try {
     const { userId, carId, startDate, endDate, totalPrice, phoneNumber } = req.body;
@@ -253,5 +285,6 @@ module.exports = {
   GetBookingDetailOnOwnCar,
   CancelBooking,
   deleteBookingByAdmin,
-  updateBookingOnOwnCar
+  updateBookingOnOwnCar,
+  GetAllBookingOwnCar
 };
