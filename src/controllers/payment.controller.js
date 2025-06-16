@@ -148,9 +148,69 @@ async function getPaymentForOwnCars(req, res) {
   }
 }
 
+async function updatePaymentStatusByAdmin(req, res) {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const payment = await prisma.payment.findUnique({ where: { id } });
+
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    const updatedPayment = await prisma.payment.update({
+      where: { id },
+      data: { status },
+    });
+
+    res.status(200).json({ message: 'Payment status updated', data: updatedPayment });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+async function getAllPayments(req, res) {
+  try {
+    const payments = await prisma.payment.findMany();
+
+    if (!payments) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    res.status(200).json({ message: 'Payment found', data: payments });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+async function deletePaymentByAdmin(req, res) {
+  try {
+    const { id } = req.params;
+
+    const payment = await prisma.payment.findUnique({ where: { id } });
+
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    await prisma.payment.delete({ where: { id } });
+
+    res.status(200).json({ message: 'Payment deleted' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
 module.exports = {
   CreateInvoice,
   UpdateInvoice,
   getOwnPayment,
-  getPaymentForOwnCars
+  getPaymentForOwnCars,
+  updatePaymentStatusByAdmin,
+  getAllPayments,
+  deletePaymentByAdmin
 }
