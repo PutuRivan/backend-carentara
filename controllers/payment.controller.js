@@ -73,9 +73,9 @@ async function CreateInvoice(req, res) {
 }
 
 async function UpdateInvoice(req, res) {
-  const callbackToken = req.headers['x-callback-token'];
+  const callbackToken = req.headers['X-CALLBACK-TOKEN'];
   const weebHookId = req.headers['webhook-id'];
-
+  
   if (callbackToken !== XENDIT_CALLBACK_TOKEN || !weebHookId) {
     return res.status(403).json({ message: 'Invalid callback token' });
   }
