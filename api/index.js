@@ -1,8 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const Router = require('./router');
-const { PORT } = require('./config/index')
+const Router = require('../router');
+const { PORT } = require('../config/index')
 
 const app = express();
 app.use(express.json());
