@@ -11,7 +11,7 @@ router.put('/admin/update-invoice', authorization(['ADMIN']), updatePaymentStatu
 router.get('/admin', authorization(['ADMIN']), getAllPayments)
 router.delete('/admin/:id', authorization(['ADMIN']), deletePaymentByAdmin)
 
-router.post('/update/xendit-callback', UpdateInvoice)
+router.post('/xendit-callback', UpdateInvoice)
 
 
 module.exports = router

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -115,7 +116,7 @@ model Payment {
   amount        Decimal
   paymentMethod String?
   status        PaymentStatus @default(PENDING)
-  transactionId String?
+  transactionId String?       @unique
   invoiceUrl    String
   paymentDate   DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
