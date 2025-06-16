@@ -55,7 +55,6 @@ async function getCarsById(req, res) {
           phoneNumber: true,
           profilePicture: true,
           role: true,
-          isVerified: true,
           createdAt: true,
           updatedAt: true
         }
