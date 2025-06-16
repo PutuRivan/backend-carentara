@@ -234,12 +234,14 @@ async function updateBookingOnOwnCar(req, res) {
       return res.status(400).json({ message: 'Booking tidak bisa diupdate karena status bukan PENDING' });
     }
 
-    await prisma.booking.update({
+    const updatedBooking = await prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: bookingStatus
       }
     });
+
+    res.status(200).json({ message: 'Booking berhasil diupdate', data: updatedBooking });
 
   } catch (error) {
     console.error('updateBookingOnOwnCar Error:', error);

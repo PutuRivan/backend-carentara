@@ -75,7 +75,8 @@ async function getReviewsByOwnCar(req, res) {
       },
     });
 
-    res.json(reviews);
+    res.status(200).json({ message: "Berhasil mendapatkan review", data: reviews });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -100,24 +101,32 @@ async function createReview(req, res) {
     }
 
     // Cek apakah review sudah pernah dibuat untuk booking ini
-    const existing = await prisma.review.findUnique({
-      where: { bookingId },
+    const existing = await prisma.review.findFirst({
+      where: {
+        booking: {
+          id: bookingId
+        },
+        user: {
+          id: userId
+        }
+      },
     });
 
     if (existing) {
-      return res.status(400).json({ message: 'Review untuk booking ini sudah ada.' });
+      return res.status(400).json({ message: 'user telah membuat review untuk booking ini.' });
     }
 
     const newReview = await prisma.review.create({
       data: {
-        bookingId,
-        userId,
+        booking: { connect: { id: bookingId } },
+        user: { connect: { id: userId } },
+        car: { connect: { id: booking.carId } },
         rating,
         comment,
       },
     });
 
-    res.status(201).json(newReview);
+    res.status(201).json({ message: "Review berhasil dibuat", data: newReview });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -142,7 +151,7 @@ async function updateReview(req, res) {
       data: { rating, comment },
     });
 
-    res.json(updated);
+    res.status(200).json({ message: "Review berhasil diupdate", data: updated });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
