@@ -1,14 +1,21 @@
 const prisma = require('../utils/prisma');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../config');
+const { JWT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URL } = require('../config');
+const { google } = require('googleapis');
+
+const oauth2Client = new google.auth.OAuth2(
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECT_URL
+);
 
 async function registerUser(req, res) {
   try {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Gagal Menambahkan User',
         error: 'Data Tidak Lengkap'
       });
@@ -17,7 +24,7 @@ async function registerUser(req, res) {
     const userExists = await prisma.user.findUnique({ where: { email } });
 
     if (userExists) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Gagal Menambahkan User',
         error: 'Email Sudah Terdaftar'
       });
@@ -114,7 +121,7 @@ async function registerOwnerByAdmin(req, res) {
     const { name, email, password, role } = req.body;
 
     if (!name || !email || !password || !role) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Gagal Menambahkan User',
         error: 'Data Tidak Lengkap'
       });
@@ -123,7 +130,7 @@ async function registerOwnerByAdmin(req, res) {
     const userExists = await prisma.user.findUnique({ where: { email } });
 
     if (userExists) {
-      res.status(400).json({
+      return res.status(400).json({
         message: 'Gagal Menambahkan User',
         error: 'Email Sudah Terdaftar'
       });
@@ -147,7 +154,7 @@ async function registerOwnerByAdmin(req, res) {
     })
 
     if (!user) {
-      res.status(500).json({
+      return res.status(500).json({
         message: 'Gagal Menambahkan User',
         error: 'Gagal Menambahkan User'
       });
@@ -168,9 +175,65 @@ async function registerOwnerByAdmin(req, res) {
   }
 }
 
+async function loginGoogle(req, res) {
+  const scopes = [
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/userinfo.email'
+  ];
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: scopes
+  });
+
+  res.redirect(url); 
+}
+
+async function googleCallback(req, res) {
+  const code = req.query.code;
+
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({
+      auth: oauth2Client,
+      version: 'v2',
+    });
+
+    const { data } = await oauth2.userinfo.get();
+    const { email, name, id: googleId } = data;
+
+    // Cek user di database
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          googleId, // pastikan ada field googleId di Prisma model user
+          role: 'USER', // default role jika baru
+        }
+      });
+    }
+
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+
+    // Redirect ke frontend (bawa token via query param)
+    res.redirect(`https://carentara.vercel.app/auth/callback?token=${token}`);
+
+  } catch (error) {
+    console.error('Google OAuth Error:', error);
+    res.status(500).json({ message: 'Google OAuth gagal', error: error.message });
+  }
+}
 
 module.exports = {
   registerUser,
   Login,
-  registerOwnerByAdmin
+  registerOwnerByAdmin,
+  loginGoogle,
+  googleCallback
 }
